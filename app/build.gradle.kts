@@ -28,6 +28,8 @@ android {
         }
     }
     compileOptions {
+        isCoreLibraryDesugaringEnabled = true // Just added
+
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
     }
@@ -47,6 +49,8 @@ android {
 }
 
 dependencies {
+    // newly Added
+    coreLibraryDesugaring(libs.desugar.jdk.libs)
 
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)

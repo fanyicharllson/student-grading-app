@@ -1,10 +1,10 @@
 package com.example.student_grade_app.utils
 
-
 import android.content.Context
 import android.net.Uri
 import com.example.student_grade_app.model.Student
 import org.apache.poi.ss.usermodel.CellType
+import org.apache.poi.ss.usermodel.DataFormatter
 import org.apache.poi.ss.usermodel.FillPatternType
 import org.apache.poi.ss.usermodel.IndexedColors
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -13,55 +13,47 @@ import java.io.OutputStream
 
 /**
  * ## ExcelHelper
+ * Handles reading and writing of `.xlsx` files using Apache POI.
  *
- * Handles all reading and writing of `.xlsx` files using Apache POI.
- *
- * ### Expected Excel Input Format
- * The first row must be a header row. Columns should follow this layout:
- * | A      | B       | C       | D       | ... |
- * |--------|---------|---------|---------|-----|
- * | Name   | Score 1 | Score 2 | Score 3 | ... |
- * | Alice  | 85      | 90      | 78      | ... |
- *
- * ### Output Sheet
- * A new sheet named "Results" is added to the same workbook with:
- * Name | Average | Grade | Status
+ * NOTE: These functions should be called from a Background Thread (Dispatchers.IO)
+ * to prevent UI freezing.
  */
 object ExcelHelper {
 
     // ── Reading ────────────────────────────────────────────────────────────
 
-    /**
-     * Parses an Excel file from the given [uri] and returns a list of [Student]s.
-     *
-     * @param context  Android context (needed to open the URI stream).
-     * @param uri      URI of the selected .xlsx file.
-     * @return List of students parsed from the first sheet, or empty list on error.
-     */
     fun readStudents(context: Context, uri: Uri): List<Student> {
         val students = mutableListOf<Student>()
+        // DataFormatter handles different cell types (strings, numbers, formulas) gracefully
+        val formatter = DataFormatter()
 
         try {
             val inputStream: InputStream = context.contentResolver.openInputStream(uri)
                 ?: return emptyList()
 
             val workbook = XSSFWorkbook(inputStream)
-            val sheet    = workbook.getSheetAt(0)      // always read first sheet
+            val sheet    = workbook.getSheetAt(0)
 
-            // Skip row 0 (header) — start from row index 1
             for (rowIndex in 1..sheet.lastRowNum) {
                 val row = sheet.getRow(rowIndex) ?: continue
 
-                // Column 0 → student name
-                val name = row.getCell(0)?.stringCellValue?.trim() ?: continue
+                // Safely get name using formatter
+                val name = formatter.formatCellValue(row.getCell(0)).trim()
                 if (name.isBlank()) continue
 
-                // Column 1 onwards → scores (read until empty cell)
                 val scores = mutableListOf<Double>()
+                // Start from column 1, read until the end of the row
                 for (colIndex in 1 until row.lastCellNum) {
                     val cell = row.getCell(colIndex) ?: break
-                    if (cell.cellType == CellType.NUMERIC) {
-                        scores.add(cell.numericCellValue)
+
+                    // Improved logic: Handle Numeric and Formula-based numbers
+                    when (cell.cellType) {
+                        CellType.NUMERIC -> scores.add(cell.numericCellValue)
+                        CellType.FORMULA -> {
+                            // Try to get the cached numeric value from the formula
+                            try { scores.add(cell.numericCellValue) } catch (e: Exception) { /* skip */ }
+                        }
+                        else -> { /* Ignore non-numeric data like text in score columns */ }
                     }
                 }
 
@@ -75,7 +67,6 @@ object ExcelHelper {
 
         } catch (e: Exception) {
             e.printStackTrace()
-            // Return whatever was parsed before the error
         }
 
         return students
@@ -83,15 +74,6 @@ object ExcelHelper {
 
     // ── Writing ────────────────────────────────────────────────────────────
 
-    /**
-     * Writes calculated student results into a new "Results" sheet inside
-     * the original workbook, then saves the file to [outputUri].
-     *
-     * @param context     Android context.
-     * @param inputUri    URI of the original .xlsx file (we re-open to preserve data).
-     * @param outputUri   URI where the updated file will be saved.
-     * @param students    List of students with grades already calculated.
-     */
     fun writeResults(
         context   : Context,
         inputUri  : Uri,
@@ -99,20 +81,21 @@ object ExcelHelper {
         students  : List<Student>
     ) {
         try {
-            // Re-open original file to preserve existing data
+            // 1. Open original to preserve existing sheets
             val inputStream: InputStream = context.contentResolver.openInputStream(inputUri)
                 ?: return
             val workbook = XSSFWorkbook(inputStream)
             inputStream.close()
 
-            // Remove old results sheet if it exists (clean re-run)
-            workbook.getSheet("Results")?.let {
-                workbook.removeSheetAt(workbook.getSheetIndex(it))
+            // 2. Clean old "Results" sheet if it exists
+            val existingIndex = workbook.getSheetIndex("Results")
+            if (existingIndex != -1) {
+                workbook.removeSheetAt(existingIndex)
             }
 
             val resultsSheet = workbook.createSheet("Results")
 
-            // ── Header Row ────────────────────────────────────────────────
+            // 3. Setup Header Style (Dark Blue background, White Bold font)
             val headerStyle = workbook.createCellStyle().apply {
                 fillForegroundColor = IndexedColors.DARK_BLUE.index
                 fillPattern         = FillPatternType.SOLID_FOREGROUND
@@ -123,6 +106,7 @@ object ExcelHelper {
                 setFont(font)
             }
 
+            // 4. Create Header Row
             val headerRow = resultsSheet.createRow(0)
             listOf("Name", "Average", "Grade", "Status").forEachIndexed { col, title ->
                 headerRow.createCell(col).apply {
@@ -131,7 +115,7 @@ object ExcelHelper {
                 }
             }
 
-            // ── Data Rows ─────────────────────────────────────────────────
+            // 5. Fill Data Rows
             students.forEachIndexed { index, student ->
                 val row = resultsSheet.createRow(index + 1)
                 row.createCell(0).setCellValue(student.name)
@@ -142,15 +126,16 @@ object ExcelHelper {
                 )
             }
 
-            // Auto-size columns for readability
-            for (col in 0..3) resultsSheet.autoSizeColumn(col)
+            // 6. Auto-size for mobile readability
+            for (col in 0..3) {
+                resultsSheet.autoSizeColumn(col)
+            }
 
-            // ── Save to output URI ─────────────────────────────────────────
-            val outputStream: OutputStream = context.contentResolver.openOutputStream(outputUri)
-                ?: return
-            workbook.write(outputStream)
-            outputStream.flush()
-            outputStream.close()
+            // 7. Write to Output (using use blocks for automatic closing)
+            context.contentResolver.openOutputStream(outputUri)?.use { outputStream ->
+                workbook.write(outputStream)
+                outputStream.flush()
+            }
             workbook.close()
 
         } catch (e: Exception) {
