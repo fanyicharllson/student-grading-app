@@ -132,8 +132,7 @@ The app will add a new **"Results"** sheet to the same file with:
 
 1. **Clone the repo**
    ```bash
-   git clone https://github.com/your-username/grade-calculator.git
-   cd grade-calculator
+   git clone https://github.com/fanyicharllson/student-grading-app
    ```
 
 2. **Open in Android Studio**
@@ -158,11 +157,11 @@ grade-calculator/
 
 ## 👥 Pair Programming
 
-| Role | Name |
-|------|------|
-| Developer (Kotlin) | [Your Name] |
-| Developer (Dart) | [Partner Name] |
-| Tester | [Tester Name] |
+| Role | Name            |
+|------|-----------------|
+| Developer (Kotlin) | Fanyi Charllson |
+| Developer (Dart) | Adrian Trello   |
+| Tester | Fanyi & Adrian  |
 
 ---
 
