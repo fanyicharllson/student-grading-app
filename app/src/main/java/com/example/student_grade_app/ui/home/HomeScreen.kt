@@ -1,4 +1,4 @@
-package com.example.student_grade_app.ui.onboarding.home
+package com.example.student_grade_app.ui.home
 
 import com.example.student_grade_app.ui.theme.*
 import android.net.Uri

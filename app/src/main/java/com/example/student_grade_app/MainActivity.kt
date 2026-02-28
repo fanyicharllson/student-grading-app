@@ -9,9 +9,9 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.student_grade_app.ui.onboarding.OnboardingScreen
-import com.example.student_grade_app.ui.onboarding.home.HomeScreen
-import com.example.student_grade_app.ui.onboarding.preview.PreviewScreen
-import com.example.student_grade_app.ui.onboarding.results.ResultsScreen
+import com.example.student_grade_app.ui.home.HomeScreen
+import com.example.student_grade_app.ui.preview.PreviewScreen
+import com.example.student_grade_app.ui.results.ResultsScreen
 import com.example.student_grade_app.ui.theme.GradeCalculatorTheme
 import com.example.student_grade_app.viewmodel.GradeViewModel
 

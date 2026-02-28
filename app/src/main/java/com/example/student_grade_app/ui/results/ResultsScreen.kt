@@ -1,4 +1,4 @@
-package com.example.student_grade_app.ui.onboarding.results
+package com.example.student_grade_app.ui.results
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*

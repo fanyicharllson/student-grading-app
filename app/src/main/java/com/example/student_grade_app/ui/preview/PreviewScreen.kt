@@ -1,4 +1,4 @@
-package com.example.student_grade_app.ui.onboarding.preview
+package com.example.student_grade_app.ui.preview
 
 
 import androidx.compose.foundation.layout.*
