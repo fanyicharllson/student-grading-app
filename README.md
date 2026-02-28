@@ -160,8 +160,8 @@ grade-calculator/
 | Role | Name            |
 |------|-----------------|
 | Developer (Kotlin) | Fanyi Charllson |
-| Developer (Dart) | Adrian Trello   |
-| Tester | Fanyi & Adrian  |
+| Developer (Dart) | Adrien Trello   |
+| Tester | Fanyi & Adrien  |
 
 ---
 
