@@ -17,6 +17,7 @@ import androidx.compose.ui.unit.sp
 import com.example.student_grade_app.model.Student
 import com.example.student_grade_app.ui.theme.*
 import com.example.student_grade_app.viewmodel.GradeViewModel
+import android.widget.Toast
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -28,10 +29,19 @@ fun ResultsScreen(
     val uiState           by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    // Show a toast when export completes
     LaunchedEffect(uiState.exportSuccess) {
         if (uiState.exportSuccess) {
-            snackbarHostState.showSnackbar("Results ready — choose where to save")
-            viewModel.clearExportSuccess()
+            Toast.makeText(context, "Results exported successfully!", Toast.LENGTH_LONG).show()
+            viewModel.resetExportState()
+        }
+    }
+
+    // Show a toast when an error occurs
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            viewModel.clearError()
         }
     }
 

@@ -27,8 +27,13 @@ fun HomeScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.students) {
-        if (uiState.students.isNotEmpty()) onImported()
+    // Use the one-time navigation flag set by importExcel so Home only navigates
+    // to Preview immediately after a fresh import. Returning to Home won't re-trigger it.
+    LaunchedEffect(uiState.navigateToPreview) {
+        if (uiState.navigateToPreview) {
+            onImported()
+            viewModel.clearNavigateToPreview()
+        }
     }
 
     val filePicker = rememberLauncherForActivityResult(

@@ -40,32 +40,41 @@ class GradeViewModel : ViewModel() {
     /**
      * Reads students from the selected Excel file.
      * Runs on IO thread to avoid blocking the UI.
+     * Sets a one-time navigation flag so Home can navigate to Preview exactly once.
      */
     fun importExcel(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
 
             val students = ExcelHelper.readStudents(context, uri)
 
-            _uiState.value = _uiState.value.copy(
-                isLoading    = false,
-                importedUri  = uri,
-                students     = students,
-                errorMessage = if (students.isEmpty()) "No students found in file" else null
-            )
+            // Use atomic update and set navigateToPreview so Home will navigate once
+            _uiState.update {
+                it.copy(
+                    isLoading    = false,
+                    importedUri  = uri,
+                    students     = students,
+                    errorMessage = if (students.isEmpty()) "No students found in file" else null,
+                    navigateToPreview = students.isNotEmpty()
+                )
+            }
         }
     }
 
     /**
      * Runs GradeCalculator on all imported students.
+     * Sets a one-time navigation flag so the UI can navigate to Results exactly once.
      */
     fun calculateGrades() {
         val current = _uiState.value.students
         if (current.isEmpty()) return
 
-        _uiState.value = _uiState.value.copy(
-            calculatedStudents = calculator.calculateAll(current)
-        )
+        _uiState.update {
+            it.copy(
+                calculatedStudents = calculator.calculateAll(current),
+                navigateToResults = true // mark that UI should navigate
+            )
+        }
     }
 
     /**
@@ -78,52 +87,73 @@ class GradeViewModel : ViewModel() {
         val inputUri = _uiState.value.importedUri ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
+            // Update UI to show loading
             _uiState.update { it.copy(isExporting = true) }
 
-            try {
-                // Use ApplicationContext to avoid Activity memory leaks
-                val appContext = context.applicationContext
-                val outputFile = ExcelHelper.writeResultsToCache(appContext, inputUri, results)
+            val outputFile = ExcelHelper.writeResultsToCache(
+                context = context,
+                inputUri = inputUri,
+                students = results
+            )
 
-                withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isExporting = false) }
+            withContext(Dispatchers.Main) {
+                _uiState.update { it.copy(isExporting = false) }
 
-                    if (outputFile != null && outputFile.exists()) {
+                if (outputFile != null && outputFile.exists()) {
+                    try {
                         val fileUri = FileProvider.getUriForFile(
-                            appContext,
-                            "${appContext.packageName}.provider",
+                            context,
+                            "${context.packageName}.provider",
                             outputFile
                         )
 
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
                             type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                             putExtra(Intent.EXTRA_STREAM, fileUri)
-                            // IMPORTANT: Allow the other app to read this file
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
 
+                        // Use Activity Context if possible, otherwise add NEW_TASK
                         val chooser = Intent.createChooser(shareIntent, "Save or Share Results")
-                        // CRITICAL: Chooser needs the flag too!
                         chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        context.startActivity(chooser)
 
-                        appContext.startActivity(chooser)
+                        // Notify UI that export succeeded (used to show Toast)
+                        _uiState.update { it.copy(exportSuccess = true, errorMessage = null) }
+
+                    } catch (e: Exception) {
+                        _uiState.update { it.copy(errorMessage = "Sharing failed: ${e.message}") }
                     }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace() // Look for "OutOfMemoryError" in Logcat
-                withContext(Dispatchers.Main) {
-                    _uiState.update { it.copy(isExporting = false, errorMessage = e.message) }
+                } else {
+                    _uiState.update { it.copy(errorMessage = "Could not create Excel file") }
                 }
             }
         }
     }
 
+    // New helper: clear the one-time navigation flag
+    fun clearNavigateToResults() {
+        _uiState.update { it.copy(navigateToResults = false) }
+    }
 
+    // New helper: clear the one-time navigation flag from Home
+    fun clearNavigateToPreview() {
+        _uiState.update { it.copy(navigateToPreview = false) }
+    }
 
     /** Clears export success flag after snackbar is shown. */
     fun clearExportSuccess() {
         _uiState.value = _uiState.value.copy(exportSuccess = false)
+    }
+
+    // New helper: reset export flag (atomic)
+    fun resetExportState() {
+        _uiState.update { it.copy(exportSuccess = false) }
+    }
+
+    // New helper: clear any error message
+    fun clearError() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }
 
@@ -139,5 +169,9 @@ data class GradeUiState(
     val students           : List<Student> = emptyList(),
     val calculatedStudents : List<Student> = emptyList(),
     val exportSuccess      : Boolean       = false,
-    val errorMessage       : String?       = null
+    val errorMessage       : String?       = null,
+    // One-time navigation event: when true, UI should navigate to Results and then clear it
+    val navigateToResults  : Boolean       = false,
+    // One-time navigation event: when true, Home should navigate to Preview and then clear it
+    val navigateToPreview  : Boolean       = false
 )

@@ -25,8 +25,14 @@ fun PreviewScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.calculatedStudents) {
-        if (uiState.calculatedStudents.isNotEmpty()) onCalculated()
+    // Use a one-time navigation flag so Preview only navigates to Results when
+    // a calculation just happened. This prevents the "flicker" where
+    // returning to Preview immediately navigates forward again.
+    LaunchedEffect(uiState.navigateToResults) {
+        if (uiState.navigateToResults) {
+            onCalculated()
+            viewModel.clearNavigateToResults()
+        }
     }
 
     Scaffold(
