@@ -13,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -73,51 +74,52 @@ class GradeViewModel : ViewModel() {
      * No storage permissions needed — FileProvider handles the sharing safely.
      */
     fun exportResults(context: Context) {
-        val results  = _uiState.value.calculatedStudents
+        val results = _uiState.value.calculatedStudents
         val inputUri = _uiState.value.importedUri ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
-            _uiState.value = _uiState.value.copy(isExporting = true)
+            _uiState.update { it.copy(isExporting = true) }
 
-            val outputFile = ExcelHelper.writeResults(
-                context  = context,
-                inputUri = inputUri,
-                students = results
-            )
+            try {
+                // Use ApplicationContext to avoid Activity memory leaks
+                val appContext = context.applicationContext
+                val outputFile = ExcelHelper.writeResultsToCache(appContext, inputUri, results)
 
-            withContext(Dispatchers.Main) {
-                _uiState.value = _uiState.value.copy(isExporting = false)
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(isExporting = false) }
 
-                if (outputFile != null) {
-                    // Use FileProvider to safely share the cache file
-                    val fileUri = FileProvider.getUriForFile(
-                        context,
-                        "${context.packageName}.provider",
-                        outputFile
-                    )
+                    if (outputFile != null && outputFile.exists()) {
+                        val fileUri = FileProvider.getUriForFile(
+                            appContext,
+                            "${appContext.packageName}.provider",
+                            outputFile
+                        )
 
-                    // Open Android ShareSheet — user picks where to save/send
-                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                        type        = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                        putExtra(Intent.EXTRA_STREAM, fileUri)
-                        putExtra(Intent.EXTRA_SUBJECT, "Grade Results")
-                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                            type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                            putExtra(Intent.EXTRA_STREAM, fileUri)
+                            // IMPORTANT: Allow the other app to read this file
+                            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        }
+
+                        val chooser = Intent.createChooser(shareIntent, "Save or Share Results")
+                        // CRITICAL: Chooser needs the flag too!
+                        chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        chooser.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+                        appContext.startActivity(chooser)
                     }
-
-                    context.startActivity(
-                        Intent.createChooser(shareIntent, "Save or Share Results")
-                    )
-
-                    _uiState.value = _uiState.value.copy(exportSuccess = true)
-                } else {
-                    _uiState.value = _uiState.value.copy(
-                        errorMessage = "Export failed — please try again"
-                    )
+                }
+            } catch (e: Exception) {
+                e.printStackTrace() // Look for "OutOfMemoryError" in Logcat
+                withContext(Dispatchers.Main) {
+                    _uiState.update { it.copy(isExporting = false, errorMessage = e.message) }
                 }
             }
         }
     }
+
+
 
     /** Clears export success flag after snackbar is shown. */
     fun clearExportSuccess() {

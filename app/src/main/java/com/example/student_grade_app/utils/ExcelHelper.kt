@@ -17,9 +17,6 @@ import java.io.InputStream
  * Handles all reading and writing of `.xlsx` files using Apache POI.
  *
  * ### Expected Input Format
- * | Name  | Score 1 | Score 2 | Score 3 |
- * |-------|---------|---------|---------|
- * | Alice | 85      | 90      | 78      |
  *
  * ### Output
  * Saves "GradeResults.xlsx" to the app's cache directory — no storage
@@ -72,6 +69,107 @@ object ExcelHelper {
 
         return students
     }
+
+
+    /**
+     * Writes results to a temporary file in the cache and returns that File object.
+     */
+    /**
+     * Writes results to a temporary file in the cache and returns that File object.
+     * Fixes: Moves "Results" to the first tab and sets it as the active sheet.
+     */
+    fun writeResultsToCache(
+        context: Context,
+        inputUri: Uri,
+        students: List<Student>
+    ): java.io.File? {
+        val TAG = "ExcelHelper"
+
+        try {
+            // 1. Setup File & Force Delete Old Version
+            val outputFile = java.io.File(context.cacheDir, "Grade_Results.xlsx")
+            if (outputFile.exists()) {
+                outputFile.delete()
+            }
+
+            // 2. Open Workbook from the imported URI
+            val inputStream = context.contentResolver.openInputStream(inputUri)
+                ?: throw Exception("Could not open Input Stream from Uri")
+
+            val workbook = XSSFWorkbook(inputStream)
+            inputStream.close()
+            android.util.Log.d(TAG, "Workbook opened. Student count: ${students.size}")
+
+            // 3. Manage Sheets - Ensure "Results" is the FIRST tab
+            val sheetName = "Results"
+            val existingIndex = workbook.getSheetIndex(sheetName)
+            if (existingIndex != -1) {
+                workbook.removeSheetAt(existingIndex)
+            }
+
+            // Create the new sheet
+            val resultsSheet = workbook.createSheet(sheetName)
+
+            // Move "Results" to position 0 (the very first tab)
+            val currentIdx = workbook.getSheetIndex(resultsSheet)
+            workbook.setSheetOrder(sheetName, 0)
+
+            // Tell Excel to focus on this sheet when the file opens
+            workbook.setActiveSheet(0)
+            workbook.setSelectedTab(0)
+
+            // 4. Styling (Header: Dark Blue Background, White Bold Text)
+            val headerStyle = workbook.createCellStyle().apply {
+                fillForegroundColor = IndexedColors.DARK_BLUE.index
+                fillPattern = FillPatternType.SOLID_FOREGROUND
+                setFont(workbook.createFont().apply {
+                    bold = true
+                    color = IndexedColors.WHITE.index
+                })
+            }
+
+            // 5. Create Header Row
+            val headerRow = resultsSheet.createRow(0)
+            listOf("Name", "Average", "Grade", "Status").forEachIndexed { col, title ->
+                headerRow.createCell(col).apply {
+                    setCellValue(title)
+                    cellStyle = headerStyle
+                }
+            }
+
+            // 6. Data Injection (Rows 1 to N)
+            students.forEachIndexed { index, student ->
+                val row = resultsSheet.createRow(index + 1)
+                row.createCell(0).setCellValue(student.name)
+                row.createCell(1).setCellValue(student.average ?: 0.0)
+                row.createCell(2).setCellValue(student.grade ?: "-")
+                row.createCell(3).setCellValue(if (student.passed == true) "PASS" else "FAIL")
+            }
+
+            // 7. Manual Column Widths (Avoids the AWT FontRenderContext crash)
+            resultsSheet.setColumnWidth(0, 20 * 256) // Name
+            resultsSheet.setColumnWidth(1, 15 * 256) // Average
+            resultsSheet.setColumnWidth(2, 12 * 256) // Grade
+            resultsSheet.setColumnWidth(3, 12 * 256) // Status
+
+            // 8. Final Save to File
+            outputFile.outputStream().use { fos ->
+                workbook.write(fos)
+                fos.flush()
+            }
+            workbook.close()
+
+            android.util.Log.d(TAG, "File saved successfully to cache.")
+            return outputFile
+
+        } catch (e: Exception) {
+            android.util.Log.e(TAG, "CRITICAL ERROR during Excel Write: ${e.message}", e)
+            return null
+        }
+    }
+
+
+
 
     // ── Writing ────────────────────────────────────────────────────────────
 
@@ -156,3 +254,4 @@ object ExcelHelper {
         }
     }
 }
+
