@@ -9,16 +9,6 @@ import com.example.student_grade_app.model.Student
  * Core business logic class responsible for computing student grades.
  * This class is intentionally kept pure — it has NO dependency on Android
  * or UI frameworks, making it easy to test and reuse in the Dart version.
- *
- * ### Grading Scale Used
- * | Average Score | Letter Grade |
- * |---------------|--------------|
- * | 90 – 100      | A            |
- * | 80 – 89       | B            |
- * | 70 – 79       | C            |
- * | 60 – 69       | D            |
- * | 0  – 59       | F            |
- *
  * ### Pass / Fail Threshold
  * A student passes if their average is **>= 50**.
  */
@@ -66,10 +56,13 @@ class GradeCalculator {
      * This is idiomatic Kotlin — equivalent to a switch/case in Java.
      */
     private fun assignGrade(average: Double): String = when {
-        average >= 90 -> "A"
-        average >= 80 -> "B"
-        average >= 70 -> "C"
-        average >= 60 -> "D"
+        average >= 80 -> "A"
+        average >= 70 -> "B+"
+        average >= 60 -> "B"
+        average >= 55 -> "C+"
+        average >= 50 -> "C"
+        average >= 45 -> "D+"
+        average >= 40 -> "D"
         else -> "F"
     }
 
@@ -77,7 +70,7 @@ class GradeCalculator {
 
     companion object {
         /** Minimum average required for a student to be considered passing. */
-        const val PASS_THRESHOLD = 50.0
+        const val PASS_THRESHOLD = 40.0
 
         /** Highest possible score a student can receive. */
         const val MAX_SCORE = 100.0

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FileProvider paths config.
+    Place this file at:
+    app/src/main/res/xml/file_provider_paths.xml
+-->
+<paths>
+    <cache-path name="grade_results" path="." />
+</paths>

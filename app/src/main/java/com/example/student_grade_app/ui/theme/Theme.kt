@@ -1,25 +1,27 @@
 package com.example.student_grade_app.ui.theme
 
-
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 
-// ── Light Color Scheme ─────────────────────────────────────────────────────
-private val AppColorScheme = lightColorScheme(
+// ── Dark Color Scheme ──────────────────────────────────────────────────────
+private val AppColorScheme = darkColorScheme(
     primary = BluePrimary,
-    onPrimary = White,
+    onPrimary = DarkBg,
     primaryContainer = BlueLight,
-    onPrimaryContainer = BlueDeep,
+    onPrimaryContainer = OffWhite,
 
     secondary = BlueDeep,
     onSecondary = White,
 
-    background = OffWhite,
+    background = DarkBg,
     onBackground = GrayDark,
 
-    surface = White,
+    surface = DarkSurface,
     onSurface = GrayDark,
+
+    surfaceVariant = DarkElevated,
+    onSurfaceVariant = GrayMid,
 
     error = AccentRed,
     onError = White

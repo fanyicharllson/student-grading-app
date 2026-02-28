@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.student_grade_app"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -61,7 +61,7 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
 
-    //Newly added dependencies
+    //Newly added
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.apache.poi.ooxml)
     implementation(libs.kotlinx.coroutines.android)

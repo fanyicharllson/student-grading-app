@@ -1,8 +1,9 @@
 package com.example.student_grade_app.viewmodel
 
-
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
+import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.student_grade_app.model.Student
@@ -13,40 +14,31 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * ## GradeViewModel
  *
  * Holds and manages all UI state for the app.
- * The UI screens observe [uiState] and react to changes automatically.
+ * Screens observe [uiState] and redraw automatically on changes.
  *
- * This follows the MVVM pattern:
- * - **Model**     → Student data class
- * - **ViewModel** → this class (logic + state)
- * - **View**      → Compose screens (HomeScreen, PreviewScreen, ResultsScreen)
+ * MVVM pattern:
+ * - Model     → Student data class
+ * - ViewModel → this class (logic + state)
+ * - View      → Compose screens
  */
 class GradeViewModel : ViewModel() {
 
-    // ── Calculator instance ────────────────────────────────────────────────
     private val calculator = GradeCalculator()
 
-    // ── UI State ───────────────────────────────────────────────────────────
-
-    /**
-     * Single source of truth for all UI state.
-     * Screens collect this flow and redraw whenever it changes.
-     */
     private val _uiState = MutableStateFlow(GradeUiState())
     val uiState: StateFlow<GradeUiState> = _uiState.asStateFlow()
 
-    // ── Actions called by the UI ───────────────────────────────────────────
+    // ── Actions ────────────────────────────────────────────────────────────
 
     /**
-     * Imports students from the selected Excel file.
+     * Reads students from the selected Excel file.
      * Runs on IO thread to avoid blocking the UI.
-     *
-     * @param context Android context for file access.
-     * @param uri     URI of the selected .xlsx file.
      */
     fun importExcel(context: Context, uri: Uri) {
         viewModelScope.launch(Dispatchers.IO) {
@@ -55,74 +47,88 @@ class GradeViewModel : ViewModel() {
             val students = ExcelHelper.readStudents(context, uri)
 
             _uiState.value = _uiState.value.copy(
-                isLoading     = false,
-                importedUri   = uri,
-                students      = students,
-                errorMessage  = if (students.isEmpty()) "No students found in file" else null
+                isLoading    = false,
+                importedUri  = uri,
+                students     = students,
+                errorMessage = if (students.isEmpty()) "No students found in file" else null
             )
         }
     }
 
     /**
-     * Runs [GradeCalculator.calculateAll] on the imported students,
-     * then updates state so the ResultsScreen can display them.
+     * Runs GradeCalculator on all imported students.
      */
     fun calculateGrades() {
         val current = _uiState.value.students
         if (current.isEmpty()) return
 
-        val results = calculator.calculateAll(current)
-
         _uiState.value = _uiState.value.copy(
-            calculatedStudents = results
+            calculatedStudents = calculator.calculateAll(current)
         )
     }
 
     /**
-     * Exports the calculated results back to a new Excel file.
-     *
-     * @param context   Android context.
-     * @param outputUri URI chosen by user to save the result file.
+     * Writes results to a file in cache dir, then opens Android ShareSheet
+     * so the user can save it to Files, WhatsApp, Gmail, etc.
+     * No storage permissions needed — FileProvider handles the sharing safely.
      */
-    fun exportResults(context: Context, outputUri: Uri) {
-        val results = _uiState.value.calculatedStudents
+    fun exportResults(context: Context) {
+        val results  = _uiState.value.calculatedStudents
         val inputUri = _uiState.value.importedUri ?: return
 
         viewModelScope.launch(Dispatchers.IO) {
             _uiState.value = _uiState.value.copy(isExporting = true)
 
-            ExcelHelper.writeResults(
-                context    = context,
-                inputUri   = inputUri,
-                outputUri  = outputUri,
-                students   = results
+            val outputFile = ExcelHelper.writeResults(
+                context  = context,
+                inputUri = inputUri,
+                students = results
             )
 
-            _uiState.value = _uiState.value.copy(
-                isExporting  = false,
-                exportSuccess = true
-            )
+            withContext(Dispatchers.Main) {
+                _uiState.value = _uiState.value.copy(isExporting = false)
+
+                if (outputFile != null) {
+                    // Use FileProvider to safely share the cache file
+                    val fileUri = FileProvider.getUriForFile(
+                        context,
+                        "${context.packageName}.provider",
+                        outputFile
+                    )
+
+                    // Open Android ShareSheet — user picks where to save/send
+                    val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                        type        = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                        putExtra(Intent.EXTRA_STREAM, fileUri)
+                        putExtra(Intent.EXTRA_SUBJECT, "Grade Results")
+                        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+
+                    context.startActivity(
+                        Intent.createChooser(shareIntent, "Save or Share Results")
+                    )
+
+                    _uiState.value = _uiState.value.copy(exportSuccess = true)
+                } else {
+                    _uiState.value = _uiState.value.copy(
+                        errorMessage = "Export failed — please try again"
+                    )
+                }
+            }
         }
     }
 
-    /** Clears the export success flag after the UI has shown the toast. */
+    /** Clears export success flag after snackbar is shown. */
     fun clearExportSuccess() {
         _uiState.value = _uiState.value.copy(exportSuccess = false)
     }
 }
 
-// ── UI State Data Class ────────────────────────────────────────────────────
+// ── UI State ───────────────────────────────────────────────────────────────
 
 /**
- * Represents the complete UI state at any point in time.
- *
- * @property isLoading          True while reading the Excel file.
- * @property isExporting        True while writing results back to Excel.
- * @property importedUri        URI of the file the user picked.
- * @property students           Raw students parsed from Excel (no grades yet).
- * @property calculatedStudents Students after [GradeCalculator] has run.
- * @property exportSuccess      True once export finishes — used to show a toast.
- * @property errorMessage       Non-null when something went wrong.
+ * Complete UI state at any point in time.
  */
 data class GradeUiState(
     val isLoading          : Boolean       = false,

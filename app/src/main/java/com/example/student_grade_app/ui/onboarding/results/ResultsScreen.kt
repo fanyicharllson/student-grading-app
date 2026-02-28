@@ -1,9 +1,5 @@
 package com.example.student_grade_app.ui.onboarding.results
 
-
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -22,53 +18,37 @@ import com.example.student_grade_app.model.Student
 import com.example.student_grade_app.ui.theme.*
 import com.example.student_grade_app.viewmodel.GradeViewModel
 
-
-/**
- * Results screen — displays calculated grades for all students
- * and allows the user to export results back to Excel.
- *
- * @param viewModel  Shared [GradeViewModel].
- * @param onBack     Navigate back to PreviewScreen.
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ResultsScreen(
     viewModel : GradeViewModel,
     onBack    : () -> Unit
 ) {
-    val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
-
-    // Show a snackbar when export succeeds
+    val context           = LocalContext.current
+    val uiState           by viewModel.uiState.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
+
     LaunchedEffect(uiState.exportSuccess) {
         if (uiState.exportSuccess) {
-            snackbarHostState.showSnackbar("Results exported successfully ✅")
+            snackbarHostState.showSnackbar("Results ready — choose where to save")
             viewModel.clearExportSuccess()
         }
-    }
-
-    // File save picker
-    val savePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
-    ) { uri: Uri? ->
-        uri?.let { viewModel.exportResults(context, it) }
     }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title  = { Text("Results") },
-                navigationIcon = {
+                title           = { Text("Results", color = OffWhite) },
+                navigationIcon  = {
                     TextButton(onClick = onBack) {
-                        Text("← Back", color = BluePrimary)
+                        Text("Back", color = BluePrimary)
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = White)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
             )
         },
-        snackbarHost    = { SnackbarHost(snackbarHostState) },
-        containerColor  = OffWhite
+        snackbarHost   = { SnackbarHost(snackbarHostState) },
+        containerColor = DarkBg
     ) { padding ->
 
         Column(
@@ -77,14 +57,12 @@ fun ResultsScreen(
                 .padding(padding)
                 .padding(horizontal = 16.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Summary stats card
             SummaryCard(students = uiState.calculatedStudents)
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Results list
             LazyColumn(
                 modifier            = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -95,22 +73,30 @@ fun ResultsScreen(
                 }
             }
 
-            // Export button
+            // Export button — triggers ShareSheet, no save picker needed
             if (uiState.isExporting) {
-                Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier         = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator(color = BluePrimary)
                 }
             } else {
                 Button(
-                    onClick  = { savePicker.launch("GradeResults.xlsx") },
+                    onClick  = { viewModel.exportResults(context) },  // ← simple!
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(vertical = 12.dp)
                         .height(54.dp),
                     shape  = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = BlueDeep)
                 ) {
-                    Text("📁  Export to Excel", style = MaterialTheme.typography.labelLarge)
+                    Text(
+                        "Export to Excel",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = White
+                    )
                 }
             }
         }
@@ -126,18 +112,18 @@ private fun SummaryCard(students: List<Student>) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape    = RoundedCornerShape(14.dp),
-        colors   = CardDefaults.cardColors(containerColor = BlueDeep)
+        shape    = RoundedCornerShape(16.dp),
+        colors   = CardDefaults.cardColors(containerColor = BlueLight)
     ) {
         Row(
-            modifier = Modifier
+            modifier              = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(20.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatItem(label = "Total",  value = "${students.size}", color = White)
-            StatItem(label = "Pass",   value = "$passCount",       color = AccentGreen)
-            StatItem(label = "Fail",   value = "$failCount",       color = AccentRed)
+            StatItem(label = "Total", value = "${students.size}", color = OffWhite)
+            StatItem(label = "Pass",  value = "$passCount",       color = AccentGreen)
+            StatItem(label = "Fail",  value = "$failCount",       color = AccentRed)
         }
     }
 }
@@ -145,8 +131,8 @@ private fun SummaryCard(students: List<Student>) {
 @Composable
 private fun StatItem(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 26.sp, fontWeight = FontWeight.Bold, color = color)
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = White.copy(alpha = 0.7f))
+        Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = GrayMid)
     }
 }
 
@@ -156,8 +142,11 @@ private fun StatItem(label: String, value: String, color: Color) {
 private fun ResultCard(student: Student) {
     val gradeColor = when (student.grade) {
         "A"  -> GradeA
+        "B+" -> GradeB
         "B"  -> GradeB
+        "C+" -> GradeC
         "C"  -> GradeC
+        "D+" -> GradeD
         "D"  -> GradeD
         else -> GradeF
     }
@@ -165,27 +154,26 @@ private fun ResultCard(student: Student) {
 
     Card(
         modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(12.dp),
-        colors    = CardDefaults.cardColors(containerColor = White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape     = RoundedCornerShape(14.dp),
+        colors    = CardDefaults.cardColors(containerColor = DarkSurface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            modifier = Modifier
+            modifier          = Modifier
                 .fillMaxWidth()
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             // Grade badge
             Box(
-                modifier = Modifier
+                modifier         = Modifier
                     .size(52.dp)
-                    .background(gradeColor.copy(alpha = 0.12f), RoundedCornerShape(10.dp)),
+                    .background(gradeColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text       = student.grade ?: "-",
-                    fontSize   = 22.sp,
+                    fontSize   = 18.sp,         // slightly smaller to fit "B+" "C+" etc
                     fontWeight = FontWeight.Bold,
                     color      = gradeColor
                 )
@@ -193,26 +181,30 @@ private fun ResultCard(student: Student) {
 
             Spacer(modifier = Modifier.width(14.dp))
 
-            // Name + average
             Column(modifier = Modifier.weight(1f)) {
-                Text(student.name, style = MaterialTheme.typography.titleLarge)
+                Text(
+                    student.name,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = OffWhite
+                )
                 Text(
                     "Average: ${"%.1f".format(student.average ?: 0.0)}",
-                    style = MaterialTheme.typography.bodyMedium
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GrayMid
                 )
             }
 
             // Pass / Fail chip
             Surface(
                 shape = RoundedCornerShape(50),
-                color = statusColor.copy(alpha = 0.12f)
+                color = statusColor.copy(alpha = 0.15f)
             ) {
                 Text(
-                    text     = if (student.passed == true) "PASS" else "FAIL",
-                    color    = statusColor,
+                    text       = if (student.passed == true) "PASS" else "FAIL",
+                    color      = statusColor,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    fontSize   = 12.sp,
+                    modifier   = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
                 )
             }
         }

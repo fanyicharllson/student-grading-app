@@ -1,7 +1,9 @@
 package com.example.student_grade_app
 
+
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.*
@@ -14,10 +16,26 @@ import com.example.student_grade_app.ui.theme.GradeCalculatorTheme
 import com.example.student_grade_app.viewmodel.GradeViewModel
 
 
+/**
+ * ## MainActivity
+ * Single activity — hosts all Compose screens.
+ * Status bar is forced dark to match the dark theme.
+ */
 class MainActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+
+        // Force dark status bar — icons become light, background matches DarkBg (#0F1117)
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(
+                scrim = android.graphics.Color.parseColor("#0F1117")
+            ),
+            navigationBarStyle = SystemBarStyle.dark(
+                scrim = android.graphics.Color.parseColor("#0F1117")
+            )
+        )
+
         setContent {
             GradeCalculatorTheme {
                 GradeCalculatorApp()
@@ -28,7 +46,6 @@ class MainActivity : ComponentActivity() {
 
 // ── Navigation ─────────────────────────────────────────────────────────────
 
-/** All screens in the app. */
 private enum class Screen {
     ONBOARDING,
     HOME,
@@ -39,10 +56,7 @@ private enum class Screen {
 @Composable
 private fun GradeCalculatorApp() {
 
-    // Single ViewModel shared across all screens
     val viewModel: GradeViewModel = viewModel()
-
-    // Current screen state — starts at onboarding
     var currentScreen by remember { mutableStateOf(Screen.ONBOARDING) }
 
     when (currentScreen) {
@@ -52,19 +66,19 @@ private fun GradeCalculatorApp() {
         )
 
         Screen.HOME -> HomeScreen(
-            viewModel = viewModel,
+            viewModel  = viewModel,
             onImported = { currentScreen = Screen.PREVIEW }
         )
 
         Screen.PREVIEW -> PreviewScreen(
-            viewModel = viewModel,
+            viewModel    = viewModel,
             onCalculated = { currentScreen = Screen.RESULTS },
-            onBack = { currentScreen = Screen.HOME }
+            onBack       = { currentScreen = Screen.HOME }
         )
 
         Screen.RESULTS -> ResultsScreen(
             viewModel = viewModel,
-            onBack = { currentScreen = Screen.PREVIEW }
+            onBack    = { currentScreen = Screen.PREVIEW }
         )
     }
 }
