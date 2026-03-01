@@ -33,6 +33,12 @@ fun main() {
     println("  SUCCESS: ${students.size} student(s) loaded.\n")
     printStudentPreview(students)
 
+    // Ask user if they want to proceed with calculation
+    if (!confirmProceedWithCalculation()) {
+        println("\n  Aborted by user. No calculations performed.")
+        return
+    }
+
     // ── Step 3: Calculate grades ───────────────────────────────────────────
     println("\n$SEPARATOR")
     println("  Calculating grades...")
@@ -161,4 +167,19 @@ private fun printResults(results: List<Student>) {
 private fun buildOutputFile(inputFile: File): File {
     val nameWithoutExt = inputFile.nameWithoutExtension
     return File(inputFile.parent, "${nameWithoutExt}${OUTPUT_SUFFIX}.xlsx")
+}
+
+//  ask user to confirm before proceeding with calculation
+private fun confirmProceedWithCalculation(): Boolean {
+    println("\nProceed to calculate grades? (y/n)")
+    repeat(3) { attempt ->
+        print("  Choice: ")
+        when (readlnOrNull()?.trim()?.lowercase()) {
+            "y", "yes" -> return true
+            "n", "no" -> return false
+            else -> println("  Please enter 'y' or 'n'. (${2 - attempt} attempt(s) left)")
+        }
+    }
+    println("  No valid response. Cancelling.")
+    return false
 }
