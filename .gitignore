@@ -43,3 +43,19 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+
+# Logs
+*.log
+
+# Local environment files
+.env
+
+# SSH keys
+id_rsa
+id_rsa.pub
+
+# IDE run configs
+.run/
+
+# Gradle cache (additional)
+.gradle-cache/
