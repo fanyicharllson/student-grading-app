@@ -12,7 +12,7 @@ import com.example.student_grade_app.ui.onboarding.OnboardingScreen
 import com.example.student_grade_app.ui.home.HomeScreen
 import com.example.student_grade_app.ui.preview.PreviewScreen
 import com.example.student_grade_app.ui.results.ResultsScreen
-import com.example.student_grade_app.ui.theme.GradeCalculatorTheme
+import com.example.student_grade_app.ui.theme.StudentGradeAppTheme
 import com.example.student_grade_app.viewmodel.GradeViewModel
 
 
@@ -37,7 +37,7 @@ class MainActivity : ComponentActivity() {
         )
 
         setContent {
-            GradeCalculatorTheme {
+            StudentGradeAppTheme {
                 GradeCalculatorApp()
             }
         }

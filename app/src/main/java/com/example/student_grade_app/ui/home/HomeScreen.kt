@@ -4,14 +4,25 @@ import com.example.student_grade_app.ui.theme.*
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -27,8 +38,6 @@ fun HomeScreen(
     val context = LocalContext.current
     val uiState by viewModel.uiState.collectAsState()
 
-    // Use the one-time navigation flag set by importExcel so Home only navigates
-    // to Preview immediately after a fresh import. Returning to Home won't re-trigger it.
     LaunchedEffect(uiState.navigateToPreview) {
         if (uiState.navigateToPreview) {
             onImported()
@@ -42,69 +51,72 @@ fun HomeScreen(
         uri?.let { viewModel.importExcel(context, it) }
     }
 
-    // ── Root column — top to bottom, no overlap ────────────────────────────
-    // Instead of Box with absolute positioning, we use a single Column
-    // where the top section (logo + text + button) takes all available space
-    // via Modifier.weight(1f), and the hint card sits naturally below it.
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(DarkBg)
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(BgDark, Color(0xFF1E1B4B))
+                )
+            )
             .statusBarsPadding()
             .navigationBarsPadding()
     ) {
 
-        // ── Top section: logo, title, button ──────────────────────────────
-        // weight(1f) means "take all remaining space after the hint card"
-        // so the hint card is never covered
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
-                .padding(horizontal = 28.dp),
+                .padding(horizontal = 32.dp),
             verticalArrangement   = Arrangement.Center,
             horizontalAlignment   = Alignment.CenterHorizontally
         ) {
 
-            // Logo box
             Box(
                 modifier = Modifier
-                    .size(90.dp)
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(BlueLight),
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(
+                        brush = Brush.linearGradient(
+                            colors = listOf(BrandPrimary, BrandSecondary)
+                        )
+                    )
+                    .border(2.dp, White.copy(alpha = 0.2f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text       = "GC",
-                    fontSize   = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color      = BluePrimary
+                Icon(
+                    imageVector = Icons.Default.School,
+                    contentDescription = null,
+                    tint = White,
+                    modifier = Modifier.size(48.dp)
                 )
             }
 
-            Spacer(modifier = Modifier.height(28.dp))
+            Spacer(modifier = Modifier.height(32.dp))
 
             Text(
-                text      = "Grade Calculator",
-                style     = MaterialTheme.typography.headlineLarge,
+                text      = "GradeFlow",
+                style     = MaterialTheme.typography.displaySmall,
+                fontWeight = FontWeight.ExtraBold,
                 textAlign = TextAlign.Center,
-                color     = OffWhite
+                color     = TextPrimary,
+                letterSpacing = (-1).sp
             )
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Text(
-                text      = "Import an Excel file with student\nscores to get started.",
-                style     = MaterialTheme.typography.bodyLarge,
+                text      = "Professional Student Grading & Export Tool",
+                style     = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
                 textAlign = TextAlign.Center,
-                color     = GrayMid
+                color     = TextSecondary
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.height(48.dp))
 
-            // Import button or loading spinner
             if (uiState.isLoading) {
-                CircularProgressIndicator(color = BluePrimary)
+                CircularProgressIndicator(color = BrandPrimary)
             } else {
                 Button(
                     onClick = {
@@ -114,108 +126,108 @@ fun HomeScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(54.dp),
-                    shape  = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BluePrimary)
+                        .height(60.dp),
+                    shape  = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
                 ) {
+                    Icon(Icons.Default.FileUpload, contentDescription = null)
+                    Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        "Import Excel File",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = DarkBg
+                        "Import Class Record",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = White
                     )
                 }
             }
 
-            // Error message
-            uiState.errorMessage?.let { error ->
-                Spacer(modifier = Modifier.height(16.dp))
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape    = RoundedCornerShape(10.dp),
-                    colors   = CardDefaults.cardColors(
-                        containerColor = AccentRed.copy(alpha = 0.15f)
-                    )
-                ) {
-                    Text(
-                        text     = error,
-                        color    = AccentRed,
-                        modifier = Modifier.padding(12.dp),
-                        style    = MaterialTheme.typography.bodyMedium
-                    )
+            AnimatedVisibility(
+                visible = uiState.errorMessage != null,
+                enter = fadeIn() + slideInVertically()
+            ) {
+                uiState.errorMessage?.let { error ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 24.dp),
+                        shape    = RoundedCornerShape(14.dp),
+                        colors   = CardDefaults.cardColors(
+                            containerColor = StatusFail.copy(alpha = 0.1f)
+                        ),
+                        border = BorderStroke(1.dp, StatusFail.copy(alpha = 0.2f))
+                    ) {
+                        Text(
+                            text     = error,
+                            color    = StatusFail,
+                            modifier = Modifier.padding(16.dp),
+                            style    = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
         }
 
-        // ── Hint card — always at the bottom, never overlaps ──────────────
         ExcelFormatHintCard(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(20.dp)
         )
     }
 }
-
-// ── Excel format hint — visual mini table ─────────────────────────────────
 
 @Composable
 private fun ExcelFormatHintCard(modifier: Modifier = Modifier) {
     Card(
         modifier = modifier,
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = DarkSurface)
+        shape    = RoundedCornerShape(24.dp),
+        colors   = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, SurfaceLighter)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(20.dp)) {
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text       = "Expected Excel Format",
-                    style      = MaterialTheme.typography.titleLarge,
-                    color      = BluePrimary,
-                    fontWeight = FontWeight.SemiBold
+                Icon(
+                    imageVector = Icons.Default.FileUpload,
+                    contentDescription = null,
+                    tint = BrandPrimary,
+                    modifier = Modifier.size(20.dp)
                 )
-                Spacer(modifier = Modifier.width(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = BlueLight
-                ) {
-                    Text(
-                        text       = ".xlsx",
-                        fontSize   = 11.sp,
-                        color      = BluePrimary,
-                        fontWeight = FontWeight.Bold,
-                        modifier   = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(
+                    text       = "Sheet Guidelines",
+                    style      = MaterialTheme.typography.titleMedium,
+                    color      = TextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Mini table
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(DarkElevated)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceLighter.copy(alpha = 0.3f))
+                    .border(1.dp, SurfaceLighter, RoundedCornerShape(14.dp))
             ) {
                 TableRow(
-                    cells    = listOf("Name", "Score 1", "Score 2", "Score 3"),
+                    cells    = listOf("Name", "Exam 1", "Exam 2", "Total"),
                     isHeader = true
                 )
-                HorizontalDivider(color = GrayLight, thickness = 0.5.dp)
-                TableRow(cells = listOf("Alice", "85", "90", "78"))
-                HorizontalDivider(color = GrayLight.copy(alpha = 0.4f), thickness = 0.5.dp)
-                TableRow(cells = listOf("Bob", "60", "55", "70"))
-                HorizontalDivider(color = GrayLight.copy(alpha = 0.4f), thickness = 0.5.dp)
-                TableRow(cells = listOf("Carol", "92", "88", "95"))
+                HorizontalDivider(color = SurfaceLighter, thickness = 1.dp)
+                TableRow(cells = listOf("Alice", "85", "90", "..."))
+                TableRow(cells = listOf("Bob", "60", "55", "..."))
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
             Text(
-                text  = "• Row 1 must be a header row   • Column A = student name   • Columns B+ = scores",
-                style = MaterialTheme.typography.bodyMedium,
-                color = GrayMid,
-                lineHeight = 20.sp
+                text  = "Column A must contain Student Names. Column B onwards are used for scoring.",
+                style = MaterialTheme.typography.bodySmall,
+                color = TextSecondary,
+                lineHeight = 18.sp
             )
         }
     }
@@ -229,19 +241,16 @@ private fun TableRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(
-                if (isHeader) BluePrimary.copy(alpha = 0.12f)
-                else          DarkElevated
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp)
+            .background(if (isHeader) SurfaceLighter.copy(alpha = 0.5f) else Color.Transparent)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         cells.forEach { cell ->
             Text(
                 text       = cell,
                 modifier   = Modifier.weight(1f),
-                fontSize   = 12.sp,
-                fontWeight = if (isHeader) FontWeight.Bold else FontWeight.Normal,
-                color      = if (isHeader) BluePrimary else OffWhite.copy(alpha = 0.8f)
+                fontSize   = 11.sp,
+                fontWeight = if (isHeader) FontWeight.ExtraBold else FontWeight.Medium,
+                color      = if (isHeader) TextPrimary else TextSecondary
             )
         }
     }

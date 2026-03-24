@@ -13,6 +13,7 @@ import com.example.student_grade_app.utils.HtmlHelper
 import com.example.student_grade_app.utils.PdfHelper
 import com.example.student_grade_app.utils.XmlHelper
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -58,15 +59,29 @@ class GradeViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Runs GradeCalculator on all imported students.
+     * Includes an artificial delay to show a captivating loading state.
+     */
     fun calculateGrades() {
         val current = _uiState.value.students
         if (current.isEmpty()) return
 
-        _uiState.update {
-            it.copy(
-                calculatedStudents = calculator.calculateAll(current),
-                navigateToResults = true 
-            )
+        viewModelScope.launch(Dispatchers.Default) {
+            _uiState.update { it.copy(isCalculating = true) }
+            
+            // Artificial delay for "captivating" UX
+            delay(1500) 
+            
+            val results = calculator.calculateAll(current)
+
+            _uiState.update {
+                it.copy(
+                    isCalculating = false,
+                    calculatedStudents = results,
+                    navigateToResults = true 
+                )
+            }
         }
     }
 
@@ -154,6 +169,7 @@ class GradeViewModel : ViewModel() {
 
 data class GradeUiState(
     val isLoading          : Boolean       = false,
+    val isCalculating      : Boolean       = false,
     val isExporting        : Boolean       = false,
     val importedUri        : Uri?          = null,
     val students           : List<Student> = emptyList(),

@@ -1,11 +1,14 @@
 package com.example.student_grade_app.ui.results
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Code
@@ -40,7 +43,6 @@ fun ResultsScreen(
     var showExportSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState()
 
-    // Show a toast when export completes
     LaunchedEffect(uiState.exportSuccess) {
         if (uiState.exportSuccess) {
             Toast.makeText(context, "Results exported successfully!", Toast.LENGTH_LONG).show()
@@ -48,7 +50,6 @@ fun ResultsScreen(
         }
     }
 
-    // Show a toast when an error occurs
     LaunchedEffect(uiState.errorMessage) {
         uiState.errorMessage?.let { msg ->
             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
@@ -58,48 +59,66 @@ fun ResultsScreen(
 
     Scaffold(
         topBar = {
-            TopAppBar(
-                title           = { Text("Results", color = OffWhite) },
-                navigationIcon  = {
-                    TextButton(onClick = onBack) {
-                        Text("Back", color = BluePrimary)
+            CenterAlignedTopAppBar(
+                title = { 
+                    Text(
+                        "Performance Report", 
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    ) 
+                },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = BrandPrimary
+                        )
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
+                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(containerColor = BgDark)
             )
         },
-        containerColor = DarkBg
+        containerColor = BgDark
     ) { padding ->
 
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 20.dp)
         ) {
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             SummaryCard(students = uiState.calculatedStudents)
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            Text(
+                "DETAILED RESULTS",
+                style = MaterialTheme.typography.labelLarge,
+                color = TextMuted,
+                letterSpacing = 2.sp,
+                modifier = Modifier.padding(start = 4.dp, bottom = 12.dp)
+            )
 
             LazyColumn(
                 modifier            = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                contentPadding      = PaddingValues(bottom = 16.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding      = PaddingValues(bottom = 24.dp)
             ) {
                 items(uiState.calculatedStudents) { student ->
                     ResultCard(student)
                 }
             }
 
-            // Export button — opens the bottom sheet
             if (uiState.isExporting) {
                 Box(
-                    modifier         = Modifier.fillMaxWidth(),
+                    modifier         = Modifier.fillMaxWidth().height(80.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = BluePrimary)
+                    CircularProgressIndicator(color = BrandPrimary)
                 }
             } else {
                 Button(
@@ -107,15 +126,17 @@ fun ResultsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(vertical = 12.dp)
-                        .height(54.dp),
-                    shape  = RoundedCornerShape(14.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = BlueDeep)
+                        .padding(vertical = 16.dp)
+                        .height(60.dp),
+                    shape  = RoundedCornerShape(18.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = BrandPrimary),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
                 ) {
                     Text(
-                        "Export Results",
-                        style = MaterialTheme.typography.labelLarge,
-                        color = White
+                        "Export Records",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
                     )
                 }
             }
@@ -125,7 +146,8 @@ fun ResultsScreen(
             ModalBottomSheet(
                 onDismissRequest = { showExportSheet = false },
                 sheetState = sheetState,
-                containerColor = DarkSurface
+                containerColor = SurfaceDark,
+                shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
             ) {
                 ExportOptionsContent(
                     onExport = { format ->
@@ -147,37 +169,42 @@ fun ExportOptionsContent(onExport: (ExportFormat) -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+            .padding(bottom = 48.dp, start = 24.dp, end = 24.dp)
     ) {
         Text(
-            text = "Select Export Format",
-            style = MaterialTheme.typography.titleLarge,
-            color = OffWhite,
-            modifier = Modifier.padding(vertical = 16.dp)
+            text = "Export As",
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
+            modifier = Modifier.padding(vertical = 20.dp)
         )
         
         ExportOptionItem(
-            title = "Excel Spreadsheet (.xlsx)",
+            title = "Excel Spreadsheet",
+            subtitle = "Best for data analysis",
             icon = Icons.Default.Description,
-            color = Color(0xFF1D6F42),
+            color = Color(0xFF10B981),
             onClick = { onExport(ExportFormat.EXCEL) }
         )
         ExportOptionItem(
-            title = "PDF Document (.pdf)",
+            title = "PDF Document",
+            subtitle = "Perfect for printing",
             icon = Icons.Default.PictureAsPdf,
-            color = Color(0xFFF44336),
+            color = Color(0xFFEF4444),
             onClick = { onExport(ExportFormat.PDF) }
         )
         ExportOptionItem(
-            title = "XML Data (.xml)",
+            title = "XML Data",
+            subtitle = "Machine readable format",
             icon = Icons.Default.Code,
-            color = Color(0xFFFF9800),
+            color = Color(0xFFF59E0B),
             onClick = { onExport(ExportFormat.XML) }
         )
         ExportOptionItem(
-            title = "HTML Webpage (.html)",
+            title = "HTML Webpage",
+            subtitle = "View in any browser",
             icon = Icons.Default.Web,
-            color = Color(0xFF2196F3),
+            color = Color(0xFF3B82F6),
             onClick = { onExport(ExportFormat.HTML) }
         )
     }
@@ -186,37 +213,40 @@ fun ExportOptionsContent(onExport: (ExportFormat) -> Unit) {
 @Composable
 fun ExportOptionItem(
     title: String,
+    subtitle: String,
     icon: ImageVector,
     color: Color,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
-        color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth()
+        color = SurfaceLighter.copy(alpha = 0.2f),
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .border(BorderStroke(1.dp, SurfaceLighter.copy(alpha = 0.5f)), RoundedCornerShape(16.dp))
     ) {
         Row(
-            modifier = Modifier
-                .padding(vertical = 12.dp),
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(28.dp)
-            )
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(color.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(24.dp))
+            }
             Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = OffWhite
-            )
+            Column {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = TextPrimary, fontWeight = FontWeight.Bold)
+                Text(subtitle, style = MaterialTheme.typography.bodySmall, color = TextSecondary)
+            }
         }
     }
 }
-
-// ── Summary stats card ─────────────────────────────────────────────────────
 
 @Composable
 private fun SummaryCard(students: List<Student>) {
@@ -225,18 +255,19 @@ private fun SummaryCard(students: List<Student>) {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape    = RoundedCornerShape(16.dp),
-        colors   = CardDefaults.cardColors(containerColor = BlueLight)
+        shape    = RoundedCornerShape(24.dp),
+        colors   = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, SurfaceLighter)
     ) {
         Row(
             modifier              = Modifier
                 .fillMaxWidth()
-                .padding(20.dp),
+                .padding(24.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            StatItem(label = "Total", value = "${students.size}", color = OffWhite)
-            StatItem(label = "Pass",  value = "$passCount",       color = AccentGreen)
-            StatItem(label = "Fail",  value = "$failCount",       color = AccentRed)
+            StatItem(label = "Total", value = "${students.size}", color = BrandPrimary)
+            StatItem(label = "Pass",  value = "$passCount", color = StatusPass)
+            StatItem(label = "Fail",  value = "$failCount", color = StatusFail)
         }
     }
 }
@@ -244,12 +275,10 @@ private fun SummaryCard(students: List<Student>) {
 @Composable
 private fun StatItem(label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(value, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = color)
-        Text(label, style = MaterialTheme.typography.bodyMedium, color = GrayMid)
+        Text(value, style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold, color = color)
+        Text(label, style = MaterialTheme.typography.labelMedium, color = TextSecondary, fontWeight = FontWeight.Bold)
     }
 }
-
-// ── Individual result card ─────────────────────────────────────────────────
 
 @Composable
 private fun ResultCard(student: Student) {
@@ -263,13 +292,13 @@ private fun ResultCard(student: Student) {
         "D"  -> GradeD
         else -> GradeF
     }
-    val statusColor = if (student.passed == true) AccentGreen else AccentRed
+    val statusColor = if (student.passed == true) StatusPass else StatusFail
 
     Card(
         modifier  = Modifier.fillMaxWidth(),
-        shape     = RoundedCornerShape(14.dp),
-        colors    = CardDefaults.cardColors(containerColor = DarkSurface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = SurfaceDark),
+        border = BorderStroke(1.dp, SurfaceLighter.copy(alpha = 0.5f))
     ) {
         Row(
             modifier          = Modifier
@@ -277,47 +306,48 @@ private fun ResultCard(student: Student) {
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Grade badge
             Box(
                 modifier         = Modifier
-                    .size(52.dp)
-                    .background(gradeColor.copy(alpha = 0.15f), RoundedCornerShape(12.dp)),
+                    .size(56.dp)
+                    .background(gradeColor.copy(alpha = 0.15f), RoundedCornerShape(16.dp))
+                    .border(1.dp, gradeColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text       = student.grade ?: "-",
-                    fontSize   = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    style      = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
                     color      = gradeColor
                 )
             }
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     student.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = OffWhite
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
                 Text(
                     "Average: ${"%.1f".format(student.average ?: 0.0)}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = GrayMid
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary
                 )
             }
 
-            // Pass / Fail chip
             Surface(
-                shape = RoundedCornerShape(50),
-                color = statusColor.copy(alpha = 0.15f)
+                shape = RoundedCornerShape(10.dp),
+                color = statusColor.copy(alpha = 0.1f),
+                border = BorderStroke(1.dp, statusColor.copy(alpha = 0.2f))
             ) {
                 Text(
                     text       = if (student.passed == true) "PASS" else "FAIL",
                     color      = statusColor,
-                    fontWeight = FontWeight.Bold,
-                    fontSize   = 12.sp,
-                    modifier   = Modifier.padding(horizontal = 12.dp, vertical = 5.dp)
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize   = 11.sp,
+                    modifier   = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                 )
             }
         }
