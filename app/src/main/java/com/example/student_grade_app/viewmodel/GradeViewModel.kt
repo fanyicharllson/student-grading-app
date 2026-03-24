@@ -71,7 +71,7 @@ class GradeViewModel : ViewModel() {
             _uiState.update { it.copy(isCalculating = true) }
             
             // Artificial delay for "captivating" UX
-            delay(1500) 
+            delay(2500)
             
             val results = calculator.calculateAll(current)
 
