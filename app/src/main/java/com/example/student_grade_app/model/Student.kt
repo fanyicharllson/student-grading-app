@@ -1,5 +1,7 @@
 package com.example.student_grade_app.model
 
+import kotlinx.serialization.Serializable
+
 /**
  * Represents a single student record imported from the Excel sheet.
  *
@@ -10,6 +12,7 @@ package com.example.student_grade_app.model
  * @property grade   Letter grade assigned after calculation (null before calc)
  * @property passed  Whether the student passed (average >= 40)
  */
+@Serializable
 data class Student(
     val id      : Int,
     val name    : String,

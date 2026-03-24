@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 android {
@@ -60,11 +61,18 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.material.icons.extended)
 
     //Newly added
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.apache.poi.ooxml)
     implementation(libs.kotlinx.coroutines.android)
+    
+    // Export libraries
+    implementation(libs.itextg)
+    implementation(libs.kotlinx.serialization.json)
+    implementation(libs.log4j.core)
+    implementation(libs.log4j.api)
 
     // Testing dependencies
     testImplementation(libs.junit)

@@ -5,11 +5,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Code
+import androidx.compose.material.icons.filled.Web
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -17,7 +23,9 @@ import androidx.compose.ui.unit.sp
 import com.example.student_grade_app.model.Student
 import com.example.student_grade_app.ui.theme.*
 import com.example.student_grade_app.viewmodel.GradeViewModel
+import com.example.student_grade_app.viewmodel.ExportFormat
 import android.widget.Toast
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -27,7 +35,10 @@ fun ResultsScreen(
 ) {
     val context           = LocalContext.current
     val uiState           by viewModel.uiState.collectAsState()
-    val snackbarHostState = remember { SnackbarHostState() }
+    val scope             = rememberCoroutineScope()
+    
+    var showExportSheet by remember { mutableStateOf(false) }
+    val sheetState = rememberModalBottomSheetState()
 
     // Show a toast when export completes
     LaunchedEffect(uiState.exportSuccess) {
@@ -57,7 +68,6 @@ fun ResultsScreen(
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkSurface)
             )
         },
-        snackbarHost   = { SnackbarHost(snackbarHostState) },
         containerColor = DarkBg
     ) { padding ->
 
@@ -83,7 +93,7 @@ fun ResultsScreen(
                 }
             }
 
-            // Export button — triggers ShareSheet, no save picker needed
+            // Export button — opens the bottom sheet
             if (uiState.isExporting) {
                 Box(
                     modifier         = Modifier.fillMaxWidth(),
@@ -93,7 +103,7 @@ fun ResultsScreen(
                 }
             } else {
                 Button(
-                    onClick  = { viewModel.exportResults(context) },  // ← simple!
+                    onClick  = { showExportSheet = true },
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
@@ -103,12 +113,105 @@ fun ResultsScreen(
                     colors = ButtonDefaults.buttonColors(containerColor = BlueDeep)
                 ) {
                     Text(
-                        "Export to Excel",
+                        "Export Results",
                         style = MaterialTheme.typography.labelLarge,
                         color = White
                     )
                 }
             }
+        }
+
+        if (showExportSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showExportSheet = false },
+                sheetState = sheetState,
+                containerColor = DarkSurface
+            ) {
+                ExportOptionsContent(
+                    onExport = { format ->
+                        scope.launch { sheetState.hide() }.invokeOnCompletion {
+                            if (!sheetState.isVisible) {
+                                showExportSheet = false
+                                viewModel.exportResults(context, format)
+                            }
+                        }
+                    }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ExportOptionsContent(onExport: (ExportFormat) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 32.dp, start = 16.dp, end = 16.dp)
+    ) {
+        Text(
+            text = "Select Export Format",
+            style = MaterialTheme.typography.titleLarge,
+            color = OffWhite,
+            modifier = Modifier.padding(vertical = 16.dp)
+        )
+        
+        ExportOptionItem(
+            title = "Excel Spreadsheet (.xlsx)",
+            icon = Icons.Default.Description,
+            color = Color(0xFF1D6F42),
+            onClick = { onExport(ExportFormat.EXCEL) }
+        )
+        ExportOptionItem(
+            title = "PDF Document (.pdf)",
+            icon = Icons.Default.PictureAsPdf,
+            color = Color(0xFFF44336),
+            onClick = { onExport(ExportFormat.PDF) }
+        )
+        ExportOptionItem(
+            title = "XML Data (.xml)",
+            icon = Icons.Default.Code,
+            color = Color(0xFFFF9800),
+            onClick = { onExport(ExportFormat.XML) }
+        )
+        ExportOptionItem(
+            title = "HTML Webpage (.html)",
+            icon = Icons.Default.Web,
+            color = Color(0xFF2196F3),
+            onClick = { onExport(ExportFormat.HTML) }
+        )
+    }
+}
+
+@Composable
+fun ExportOptionItem(
+    title: String,
+    icon: ImageVector,
+    color: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        color = Color.Transparent,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(28.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = OffWhite
+            )
         }
     }
 }
@@ -183,7 +286,7 @@ private fun ResultCard(student: Student) {
             ) {
                 Text(
                     text       = student.grade ?: "-",
-                    fontSize   = 18.sp,         // slightly smaller to fit "B+" "C+" etc
+                    fontSize   = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color      = gradeColor
                 )
